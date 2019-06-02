@@ -26,3 +26,16 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+brew:
+  github:
+    owner: lhopki01
+    name: git-mass-sync
+  commit_author:
+    name: lhopki01
+    email: lhopki01@gmail.com
+  dependencies:
+    - git
+    - hub
+  install: |
+    bin.install "git-mass-sync"
+
