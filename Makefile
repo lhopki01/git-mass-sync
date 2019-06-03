@@ -12,4 +12,4 @@ lint:
 release:
 	git tag -a $$VERSION
 	git push origin $$VERSION
-	goreleaser
+	goreleaser --rm-dist
