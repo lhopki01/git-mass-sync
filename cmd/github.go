@@ -68,7 +68,7 @@ func init() {
 	githubCmd.Flags().String("regex", ".*", "Regex to match repo names against")
 	githubCmd.Flags().String("archive-dir", "", "Repo to put archived repos in\n(default is .archive in the download dir)")
 
-	err := viper.BindPFlags(githubCmd.PersistentFlags())
+	err := viper.BindPFlags(githubCmd.Flags())
 	if err != nil {
 		log.Fatalf("Binding flags failed: %s", err)
 	}
@@ -85,7 +85,7 @@ func processFlags(args []string) (string, string, string, *regexp.Regexp) {
 	fmt.Println("=============")
 	fmt.Printf("Syncing org %s into %s\n", org, dir)
 
-	archiveDir := viper.GetString("archive-Dir")
+	archiveDir := viper.GetString("archive-dir")
 	if archiveDir == "" {
 		archiveDir = fmt.Sprintf("%s/.archive", dir)
 	} else {
