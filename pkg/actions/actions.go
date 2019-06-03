@@ -60,8 +60,8 @@ func SyncRepos(reposToSync []string, dir string) ([]string, []string) {
 	}
 
 	swg.Wait()
-	close(doneFailure)
-	close(doneWarning)
+	close(failureChannel)
+	close(warningChannel)
 	<-doneFailure
 	<-doneWarning
 

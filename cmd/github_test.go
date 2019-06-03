@@ -169,6 +169,6 @@ func TestProcessFlags(t *testing.T) {
 	assert.Equal(t, "/tmp/foobar", dir)
 	assert.Equal(t, "/tmp/foobar/.archive", archiveDir)
 	assert.Equal(t, "foobar", org)
-	expectedR, _ := regexp.Compile("")
+	expectedR, _ := regexp.Compile(".*")
 	assert.Equal(t, expectedR, r)
 }

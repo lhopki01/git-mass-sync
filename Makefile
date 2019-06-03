@@ -1,8 +1,8 @@
 test:
-	go test ./...
+	go test -race ./...
 
 test-cover:
-	go test ./... -coverprofile=coverage.out
+	go test -race ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
 	rm coverage.out
 
