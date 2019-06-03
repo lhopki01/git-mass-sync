@@ -2,9 +2,9 @@
 class GitMassSync < Formula
   desc ""
   homepage ""
-  url "https://github.com/lhopki01/git-mass-sync/releases/download/v0.1.3/git-mass-sync_0.1.3_Darwin_x86_64.tar.gz"
-  version "0.1.3"
-  sha256 "7b24b9ff78916e86effd3d9bde477b8edabc304fa07eccb5fabe17f044e3074a"
+  url "https://github.com/lhopki01/git-mass-sync/releases/download/v0.1.4/git-mass-sync_0.1.4_Darwin_x86_64.tar.gz"
+  version "0.1.4"
+  sha256 "a0b6202d71accc640661310d246572dda4cd8295c098c1a5a36991cce8884be6"
   
   depends_on "git"
   depends_on "hub"
