@@ -2,14 +2,14 @@
 class GitMassSync < Formula
   desc ""
   homepage ""
-  version "1.1.6"
+  version "1.1.7"
 
   if OS.mac?
-    url "https://github.com/lhopki01/git-mass-sync/releases/download/v1.1.6/git-mass-sync_1.1.6_Darwin_x86_64.tar.gz"
-    sha256 "61a75571be0acedbbd3ab819b1e8c13403ee1534cdb4b319fdb2d75cc1a4175b"
+    url "https://github.com/lhopki01/git-mass-sync/releases/download/v1.1.7/git-mass-sync_1.1.7_Darwin_x86_64.tar.gz"
+    sha256 "fb463e13bc277ff396e47e0eb173432691cd2627079bf6ff3d8514e05fefa1de"
   elsif OS.linux?
-    url "https://github.com/lhopki01/git-mass-sync/releases/download/v1.1.6/git-mass-sync_1.1.6_Linux_x86_64.tar.gz"
-    sha256 "33367f24904f29b9e8dbb36dba3605fc70a3c4b6a6e387c13338e0be8b941f3e"
+    url "https://github.com/lhopki01/git-mass-sync/releases/download/v1.1.7/git-mass-sync_1.1.7_Linux_x86_64.tar.gz"
+    sha256 "3fb13efa78b902234b3da553d2314eecec3679432dc12c3d29a8cc91437f6a6b"
   end
   
   depends_on "git"
