@@ -16,6 +16,9 @@ import (
 )
 
 func SyncRepos(reposToSync []string, dir string) ([]string, []string) {
+	if len(reposToSync) == 0 {
+		return nil, nil
+	}
 	verbose := viper.GetBool("verbose")
 	dryRun := viper.GetBool("dry-run")
 
