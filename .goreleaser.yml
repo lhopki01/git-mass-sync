@@ -9,6 +9,8 @@ before:
 builds:
 - env:
   - CGO_ENABLED=0
+- ldflags:
+  - -X "github.com/lhopki01/git-mass-sync/cmd.Version={{.Env.VERSION}}"
 archive:
   replacements:
     darwin: Darwin
