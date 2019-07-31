@@ -65,7 +65,8 @@ var githubCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(githubCmd)
 
-	githubCmd.Flags().String("regex", ".*", "Regex to match repo names against")
+	githubCmd.Flags().String("include", ".*", "Regex to match repo names against")
+	githubCmd.Flags().String("exclude", "^$", "Regex to exclude repo names against")
 	githubCmd.Flags().String("archive-dir", "", "Repo to put archived repos in\n(default is .archive in the download dir)")
 
 	err := viper.BindPFlags(githubCmd.Flags())
@@ -75,7 +76,7 @@ func init() {
 	viper.AutomaticEnv()
 }
 
-func processFlags(args []string) (string, string, string, *regexp.Regexp) {
+func processFlags(args []string) (string, string, string, *regexp.Regexp, *regexp.Regexp) {
 	if len(args) != 2 {
 		log.Fatal("Wrong number of arguments")
 	}
@@ -93,21 +94,22 @@ func processFlags(args []string) (string, string, string, *regexp.Regexp) {
 	}
 	fmt.Printf("Archiving repos into %s\n", archiveDir)
 
-	r := regexp.MustCompile(viper.GetString("regex"))
+	inR := regexp.MustCompile(viper.GetString("include"))
+	exR := regexp.MustCompile(viper.GetString("exclude"))
 
 	fmt.Println("=============")
 
-	return dir, archiveDir, org, r
+	return dir, archiveDir, org, inR, exR
 }
 
 func runGithub(args []string) {
-	dir, archiveDir, org, r := processFlags(args)
+	dir, archiveDir, org, inR, exR := processFlags(args)
 
 	client := &http.Client{}
 	repoList := getRepoList(org, client)
 	dirList := actions.GetGitDirList(dir)
 
-	reposToSync, reposToClone, reposToArchive := repoActions(repoList, dirList, archiveDir, r)
+	reposToSync, reposToClone, reposToArchive := repoActions(repoList, dirList, archiveDir, inR, exR)
 
 	lenSync := len(reposToSync)
 	lenClone := len(reposToClone)
@@ -203,13 +205,13 @@ func repoAction(repo repo, dirList []string) (action, []string) {
 	return actionNone, dirList
 }
 
-func repoActions(repoList []repo, dirList []string, archiveDir string, r *regexp.Regexp) ([]string, []string, []string) {
+func repoActions(repoList []repo, dirList []string, archiveDir string, inR *regexp.Regexp, exR *regexp.Regexp) ([]string, []string, []string) {
 	var reposToSync []string
 	var reposToClone []string
 	var reposToArchive []string
 
 	for _, repo := range repoList {
-		if r.MatchString(repo.Name) {
+		if inR.MatchString(repo.Name) && !exR.MatchString(repo.Name) {
 			var a action
 			a, dirList = repoAction(repo, dirList)
 			switch a {

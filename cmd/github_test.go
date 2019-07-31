@@ -115,8 +115,9 @@ func TestRepoActions(t *testing.T) {
 		repos = append(repos, tc.repo)
 	}
 
-	r, _ := regexp.Compile(".*")
-	reposToSync, reposToClone, reposToArchive := repoActions(repos, []string{"archivedRepo", "syncRepo", "deletedRepo"}, "foobar", r)
+	inR, _ := regexp.Compile(".*")
+	exR, _ := regexp.Compile("^$")
+	reposToSync, reposToClone, reposToArchive := repoActions(repos, []string{"archivedRepo", "syncRepo", "deletedRepo"}, "foobar", inR, exR)
 	assert.Equal(t, []string{"syncRepo"}, reposToSync)
 	assert.Equal(t, []string{"git@giturl/cloneRepo", "git@giturl/cloneArchiveRepo"}, reposToClone)
 	assert.Equal(t, []string{"archivedRepo", "cloneArchiveRepo", "deletedRepo"}, reposToArchive)
@@ -165,10 +166,12 @@ func TestGetRepoList(t *testing.T) {
 }
 
 func TestProcessFlags(t *testing.T) {
-	dir, archiveDir, org, r := processFlags([]string{"foobar", "/tmp/foobar"})
+	dir, archiveDir, org, inR, exR := processFlags([]string{"foobar", "/tmp/foobar"})
 	assert.Equal(t, "/tmp/foobar", dir)
 	assert.Equal(t, "/tmp/foobar/.archive", archiveDir)
 	assert.Equal(t, "foobar", org)
-	expectedR, _ := regexp.Compile(".*")
-	assert.Equal(t, expectedR, r)
+	expectedInR, _ := regexp.Compile(".*")
+	assert.Equal(t, expectedInR, inR)
+	expectedExR, _ := regexp.Compile("^$")
+	assert.Equal(t, expectedExR, exR)
 }
