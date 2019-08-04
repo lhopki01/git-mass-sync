@@ -12,7 +12,7 @@ brew untap lhopki01/git-mass-sync
 
 ### Usage
 
-#### Sync all repos in a github org
+#### Sync all repos in a github org foobar
 
 `git-mass-sync github foobar ~/github/foobar`
 
