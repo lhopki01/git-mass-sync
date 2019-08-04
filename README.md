@@ -2,7 +2,7 @@ Tool to sync all repos for a github org or in a local directory
 
 ### Install
 ```
-brew tap lhopki01/git-mass-sync git@github.com:lhopki01/git-mass-sync
+brew tap lhopki01/brew git@github.com:lhopki01/brew
 brew install git-mass-sync
 ```
 
