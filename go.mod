@@ -7,7 +7,7 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
-	github.com/schollz/progressbar/v2 v2.13.0
+	github.com/schollz/progressbar/v2 v2.13.2
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
