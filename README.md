@@ -5,6 +5,10 @@ Tool to sync all repos for a github org or in a local directory
 brew tap lhopki01/brew git@github.com:lhopki01/brew
 brew install git-mass-sync
 ```
+If you have installed `git-mass-sync` before you need to remove the old tap
+```
+brew untap lhopki01/git-mass-sync
+```
 
 ### Usage
 
