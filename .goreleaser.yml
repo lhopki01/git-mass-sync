@@ -39,8 +39,7 @@ brews:
       - git
       - hub
     description: "Tool to keep multiple local repos in sync with github"
-    folder:
-      - Formula
+    folder: Formula
     install: |
       bin.install "git-mass-sync"
 
