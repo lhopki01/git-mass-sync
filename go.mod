@@ -9,7 +9,7 @@ require (
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	github.com/schollz/progressbar/v2 v2.13.0
 	github.com/spf13/afero v1.2.2 // indirect
-	github.com/spf13/cobra v0.0.4
+	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.3.0
