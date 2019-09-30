@@ -153,7 +153,7 @@ func ArchiveRepos(reposToArchive []string, dir string, archiveDir string) []stri
 		if viper.GetBool("dry-run") {
 			fmt.Printf("Would create archive dir %s if not exists\n", archiveDir)
 		} else {
-			fmt.Printf("Creating archiveDir %s", archiveDir)
+			fmt.Printf("Creating archiveDir %s\n", archiveDir)
 			err := os.MkdirAll(archiveDir, 0755)
 			if err != nil {
 				//nolint:errcheck
