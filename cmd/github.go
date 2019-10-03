@@ -47,12 +47,6 @@ const (
 	actionNone
 )
 
-type repo struct {
-	SSHURL   string `json:"ssh_url"`
-	Name     string `json:"name"`
-	Archived bool   `json:"archived"`
-}
-
 // githubCmd represents the base command when called without any subcommands
 var githubCmd = &cobra.Command{
 	Use:   "github [org] [download dir]",
@@ -122,39 +116,69 @@ func runGithub(args []string) {
 	fmt.Println("=============")
 
 	// Order is very important here.  Clone must always come before archive
-	failedSyncRepos, warningSyncRepos := actions.SyncRepos(reposToSync, dir)
-	failedCloneRepos := actions.CloneRepos(reposToClone, dir)
-	failedArchiveRepos := actions.ArchiveRepos(reposToArchive, dir, archiveDir)
+	reposToSync.SyncRepos(dir)
+	reposToClone.CloneRepos(dir)
+	reposToArchive.ArchiveRepos(dir, archiveDir)
 
-	lenSyncWarnings := len(warningSyncRepos)
-	lenSyncFailures := len(failedSyncRepos)
-	lenCloneFailures := len(failedCloneRepos)
-	lenArchiveFailures := len(failedArchiveRepos)
-
-	if lenSyncWarnings > 0 {
-		fmt.Println("=============")
-		//nolint:errcheck
-		colorstring.Println("[yellow]Warnings:")
-		for _, s := range warningSyncRepos {
-			colorstring.Printf(s)
+	lenSyncWarnings := 0
+	warnings := false
+	for _, repo := range reposToSync {
+		if repo.Severity == actions.Warning {
+			if !warnings {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[yellow]Warnings:")
+				warnings = true
+			}
+			colorstring.Printf("[green]Sync %s: [yellow]%s", repo.Name, repo.Message)
+			lenSyncWarnings++
 		}
 	}
-	if lenSyncFailures > 0 || lenCloneFailures > 0 || lenArchiveFailures > 0 {
+	// No warnings from clone or archive
+	if warnings {
 		fmt.Println("=============")
-		//nolint:errcheck
-		colorstring.Println("[red]Errors:")
-		for _, s := range failedSyncRepos {
-			//nolint:errcheck
-			colorstring.Println(s)
+	}
+
+	lenSyncFailures, lenCloneFailures, lenArchiveFailures := 0, 0, 0
+	errors := false
+	for _, repo := range reposToSync {
+		if repo.Severity == actions.Error {
+			if !errors {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[red]Errors:")
+				errors = true
+			}
+			colorstring.Printf("[green]Sync %s: [red]%s", repo.Name, repo.Message)
+			lenSyncFailures++
 		}
-		for _, s := range failedCloneRepos {
-			//nolint:errcheck
-			colorstring.Println(s)
+	}
+	for _, repo := range reposToClone {
+		if repo.Severity == actions.Error {
+			if !errors {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[red]Errors:")
+				errors = true
+			}
+			colorstring.Printf("[cyan]Clone %s: [red]%s", repo.Name, repo.Message)
+			lenCloneFailures++
 		}
-		for _, s := range failedArchiveRepos {
-			//nolint:errcheck
-			colorstring.Println(s)
+	}
+	for _, repo := range reposToArchive {
+		if repo.Severity == actions.Error {
+			if !errors {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[red]Errors:")
+				errors = true
+			}
+			colorstring.Printf("[light_magenta]Archive %s: [red]%s", repo.Name, repo.Message)
+			lenArchiveFailures++
 		}
+	}
+	if errors {
+		fmt.Println("=============")
 	}
 
 	if !viper.GetBool("dry-run") {
@@ -176,7 +200,6 @@ func runGithub(args []string) {
 			colorstring.Printf("[red]%d[reset]/[cyan]%d repos cloned\n", lenClone-lenCloneFailures, lenClone)
 		} else if lenClone != 0 {
 			colorstring.Printf("[cyan]%d/%d repos cloned\n", lenClone-lenCloneFailures, lenClone)
-
 		}
 		if lenArchiveFailures > 0 {
 			colorstring.Printf("[red]%d[reset]/[light_magenta]%d repos archived\n", lenArchive-lenArchiveFailures, lenArchive)
@@ -186,7 +209,7 @@ func runGithub(args []string) {
 	}
 }
 
-func repoAction(repo repo, dirList []string) (action, []string) {
+func repoAction(repo *actions.Repo, dirList []string) (action, []string) {
 	for i, dir := range dirList {
 		if dir == repo.Name {
 			if repo.Archived {
@@ -205,10 +228,10 @@ func repoAction(repo repo, dirList []string) (action, []string) {
 	return actionNone, dirList
 }
 
-func repoActions(repoList []repo, dirList []string, archiveDir string, inR *regexp.Regexp, exR *regexp.Regexp) ([]string, []string, []string) {
-	var reposToSync []string
-	var reposToClone []string
-	var reposToArchive []string
+func repoActions(repoList actions.Repos, dirList []string, archiveDir string, inR *regexp.Regexp, exR *regexp.Regexp) (actions.Repos, actions.Repos, actions.Repos) {
+	var reposToSync actions.Repos
+	var reposToClone actions.Repos
+	var reposToArchive actions.Repos
 
 	for _, repo := range repoList {
 		if inR.MatchString(repo.Name) && !exR.MatchString(repo.Name) {
@@ -216,38 +239,40 @@ func repoActions(repoList []repo, dirList []string, archiveDir string, inR *rege
 			a, dirList = repoAction(repo, dirList)
 			switch a {
 			case actionArchive:
-				reposToArchive = append(reposToArchive, repo.Name)
-				continue
+				reposToArchive = append(reposToArchive, repo)
 			case actionSync:
-				reposToSync = append(reposToSync, repo.Name)
-				continue
+				reposToSync = append(reposToSync, repo)
 			case actionClone:
-				reposToClone = append(reposToClone, repo.SSHURL)
-				continue
+				reposToClone = append(reposToClone, repo)
 			case actionCloneArchive:
 				if _, err := os.Stat(fmt.Sprintf("%s/%s", archiveDir, repo.Name)); os.IsNotExist(err) {
-					reposToArchive = append(reposToArchive, repo.Name)
-					reposToClone = append(reposToClone, repo.SSHURL)
+					reposToArchive = append(reposToArchive, repo)
+					reposToClone = append(reposToClone, repo)
 				}
-				continue
 			}
 		}
 	}
-	reposToArchive = append(reposToArchive, dirList...)
+	for _, dir := range dirList {
+		reposToArchive = append(reposToArchive, &actions.Repo{
+			Name: dir,
+		})
+	}
 
 	return reposToSync, reposToClone, reposToArchive
 }
 
-func getRepoList(org string, client HttpClient) []repo {
+func getRepoList(org string, client HttpClient) actions.Repos {
 	fmt.Printf("Getting repo list")
 
-	var repoList []repo
+	var repoList actions.Repos
 	url := fmt.Sprintf("https://api.github.com/orgs/%s/repos?per_page=100", org)
 	//url := fmt.Sprintf("https://api.github.com/user/repos?per_page=100")
 	token := os.Getenv("GITHUB_TOKEN")
 	for url != "" {
-		fmt.Printf(".")
-		debug.Debug(url)
+		if !viper.GetBool("verbose") {
+			fmt.Printf(".")
+		}
+		debug.Debugf("\n%s", url)
 
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
@@ -265,7 +290,7 @@ func getRepoList(org string, client HttpClient) []repo {
 			log.Fatalf("Failed to read repose body: %v", resp.Body)
 		}
 
-		var repos []repo
+		var repos actions.Repos
 		err = json.Unmarshal(buf.Bytes(), &repos)
 		if err != nil {
 			fmt.Println(buf.String())
@@ -275,7 +300,9 @@ func getRepoList(org string, client HttpClient) []repo {
 
 		url = getNextPageLink(resp.Header)
 	}
-	fmt.Println("")
+	if !viper.GetBool("verbose") {
+		fmt.Println("")
+	}
 	return repoList
 }
 
@@ -296,8 +323,6 @@ func getNextPageLink(headers http.Header) (nextPage string) {
 				return url.String()
 			}
 		}
-	} else {
-		return ""
 	}
 	return ""
 }

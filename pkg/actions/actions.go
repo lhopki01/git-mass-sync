@@ -15,33 +15,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-func SyncRepos(reposToSync []string, dir string) ([]string, []string) {
-	if len(reposToSync) == 0 {
-		return nil, nil
+func (repos Repos) SyncRepos(dir string) {
+	num := len(repos)
+	if num == 0 {
+		return
 	}
 	verbose := viper.GetBool("verbose")
 	dryRun := viper.GetBool("dry-run")
 
 	swg := sizedwaitgroup.New(viper.GetInt("parallelism"))
 
-	failureChannel := make(chan string)
-	doneFailure := make(chan bool)
-	warningChannel := make(chan string)
-	doneWarning := make(chan bool)
-	var failures []string
-	var warnings []string
-	go collectMessages(&failures, failureChannel, doneFailure)
-	go collectMessages(&warnings, warningChannel, doneWarning)
-
 	bar := progressbar.NewOptions(
-		len(reposToSync),
+		num,
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetDescription("[green]Syncing repos"),
 	)
 
 	if verbose || dryRun {
-		//nolint:errcheck
 		colorstring.Println("[green]Syncing repos")
 	} else {
 		err := bar.RenderBlank()
@@ -50,23 +41,19 @@ func SyncRepos(reposToSync []string, dir string) ([]string, []string) {
 		}
 	}
 
-	for _, repo := range reposToSync {
+	for _, repo := range repos {
 		if dryRun {
-			colorstring.Printf("[green]Would sync %s\n", repo)
+			colorstring.Printf("[green]Would sync %s\n", repo.Name)
 		} else {
 			swg.Add()
 			if verbose {
-				colorstring.Printf("[green]Syncing %s\n", repo)
+				colorstring.Printf("[green]Syncing %s\n", repo.Name)
 			}
-			go syncRepo(dir, repo, &swg, failureChannel, warningChannel, bar)
+			go repo.syncRepo(dir, &swg, bar)
 		}
 	}
 
 	swg.Wait()
-	close(failureChannel)
-	close(warningChannel)
-	<-doneFailure
-	<-doneWarning
 
 	if !verbose || dryRun {
 		err := bar.Finish()
@@ -75,21 +62,19 @@ func SyncRepos(reposToSync []string, dir string) ([]string, []string) {
 		}
 		println("")
 	}
-
-	return failures, warnings
 }
 
-func syncRepo(dir string, repo string, swg *sizedwaitgroup.SizedWaitGroup, failureChannel chan string, warningChannel chan string, bar *progressbar.ProgressBar) {
-
+func (repo *Repo) syncRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup, bar *progressbar.ProgressBar) {
 	cmd := exec.Command("hub", "sync")
-	cmd.Dir = fmt.Sprintf("%s/%s", dir, repo)
+	cmd.Dir = fmt.Sprintf("%s/%s", dir, repo.Name)
 	output, err := cmd.CombinedOutput()
-	debug.Debugf("Output of hub sync %s: %s", repo, string(output))
+	repo.Message = string(output)
+	debug.Debugf("Output of hub sync %s: %s", repo.Name, string(output))
 	if strings.Contains(string(output), "warning: ") {
-		warningChannel <- fmt.Sprintf("[green]Syncing %s: [yellow]%s", repo, string(output))
+		repo.Severity = Warning
 	}
 	if err != nil {
-		failureChannel <- fmt.Sprintf("[green]Syncing %s: [red]%s\n%s", repo, err, string(output))
+		repo.Severity = Error
 	}
 	if !viper.GetBool("verbose") {
 		err := bar.Add(1)
@@ -100,54 +85,36 @@ func syncRepo(dir string, repo string, swg *sizedwaitgroup.SizedWaitGroup, failu
 	swg.Done()
 }
 
-func collectMessages(p *[]string, channel chan string, done chan bool) {
-	for msg := range channel {
-		*p = append(*p, msg)
-	}
-	done <- true
-}
-
-func CloneRepos(reposToClone []string, dir string) []string {
+func (reposToClone Repos) CloneRepos(dir string) {
 	swg := sizedwaitgroup.New(viper.GetInt("parallelism"))
-
-	failureChannel := make(chan string)
-	done := make(chan bool)
-	var failures []string
-	go collectMessages(&failures, failureChannel, done)
 
 	for _, repo := range reposToClone {
 		if viper.GetBool("dry-run") {
-			colorstring.Printf("[cyan]Would clone %s\n", repo)
+			colorstring.Printf("[cyan]Would clone %s\n", repo.Name)
 		} else {
 			swg.Add()
-			colorstring.Printf("[cyan]Cloning %s\n", repo)
-			go cloneRepo(dir, repo, &swg, failureChannel)
+			colorstring.Printf("[cyan]Cloning %s\n", repo.Name)
+			go repo.cloneRepo(dir, &swg)
 		}
 	}
 	swg.Wait()
-	close(failureChannel)
-	<-done
-	return failures
 }
 
-func cloneRepo(dir string, repo string, swg *sizedwaitgroup.SizedWaitGroup, failureChannel chan string) {
+func (repo *Repo) cloneRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup) {
 	defer swg.Done()
-	cmd := exec.Command("git", "clone", repo)
+	cmd := exec.Command("git", "clone", repo.SSHURL)
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
-	debug.Debugf("Output of git clone %s: %s", repo, output)
+	repo.Message = string(output)
+
+	debug.Debugf("Output of git clone %s: %s", repo.Name, output)
 	if err != nil {
-		failureChannel <- fmt.Sprintf("[cyan]Cloning %s: [red]%s\n%s", repo, err, string(output))
+		repo.Severity = Error
 	}
 }
 
-func ArchiveRepos(reposToArchive []string, dir string, archiveDir string) []string {
+func (reposToArchive Repos) ArchiveRepos(dir, archiveDir string) {
 	swg := sizedwaitgroup.New(viper.GetInt("parallelism"))
-
-	failureChannel := make(chan string)
-	done := make(chan bool)
-	var failures []string
-	go collectMessages(&failures, failureChannel, done)
 
 	if _, err := os.Stat(archiveDir); os.IsNotExist(err) {
 		if viper.GetBool("dry-run") {
@@ -164,27 +131,27 @@ func ArchiveRepos(reposToArchive []string, dir string, archiveDir string) []stri
 	}
 	for _, repo := range reposToArchive {
 		if viper.GetBool("dry-run") {
-			colorstring.Printf("[light_magenta]Would archive %s in %s\n", repo, archiveDir)
+			colorstring.Printf("[light_magenta]Would archive %s in %s\n", repo.Name, archiveDir)
 		} else {
 			swg.Add()
-			colorstring.Printf("[light_magenta]Archiving %s in %s\n", repo, archiveDir)
-			go func(dir string, repo string, swg *sizedwaitgroup.SizedWaitGroup) {
-				defer swg.Done()
-
-				err := os.Rename(
-					fmt.Sprintf("%s/%s", dir, repo),
-					fmt.Sprintf("%s/%s", archiveDir, repo),
-				)
-				if err != nil {
-					failureChannel <- fmt.Sprintf("[light_magenta]Archiving %s: [red]%s\n", repo, err)
-				}
-			}(dir, repo, &swg)
+			colorstring.Printf("[light_magenta]Archiving %s in %s\n", repo.Name, archiveDir)
+			go repo.archiveRepo(dir, archiveDir, &swg)
 		}
 	}
+
 	swg.Wait()
-	close(failureChannel)
-	<-done
-	return failures
+}
+
+func (repo *Repo) archiveRepo(dir, archiveDir string, swg *sizedwaitgroup.SizedWaitGroup) {
+	defer swg.Done()
+	err := os.Rename(
+		fmt.Sprintf("%s/%s", dir, repo.Name),
+		fmt.Sprintf("%s/%s", archiveDir, repo.Name),
+	)
+	if err != nil {
+		repo.Severity = Error
+		repo.Message = err.Error()
+	}
 }
 
 func GetGitDirList(dir string) []string {
@@ -195,7 +162,7 @@ func GetGitDirList(dir string) []string {
 		log.Fatal(err)
 	}
 	for i, f := range files {
-		if i%100 == 0 {
+		if i%100 == 0 && !viper.GetBool("verbose") {
 			fmt.Printf(".")
 		}
 		if f.IsDir() {
@@ -205,13 +172,15 @@ func GetGitDirList(dir string) []string {
 			if err == nil {
 				dirList = append(dirList, f.Name())
 			} else {
-				debug.Debugf("%s is not a git directory", f.Name())
+				debug.Debugf("\n[%s] is not a git directory", f.Name())
 			}
 		} else {
-			debug.Debugf("%s is not a directory", f.Name())
+			debug.Debugf("\n[%s] is not a directory", f.Name())
 		}
 	}
-	fmt.Println("")
+	if !viper.GetBool("verbose") {
+		fmt.Println("")
+	}
 	return dirList
 }
 

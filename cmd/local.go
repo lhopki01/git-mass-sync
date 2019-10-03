@@ -15,7 +15,7 @@ var localCmd = &cobra.Command{
 	Short: "Sync all repos within the target directory",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			return fmt.Errorf("Wrong number of arguments")
+			return fmt.Errorf("wrong number of arguments")
 		}
 		return nil
 	},
@@ -35,42 +35,63 @@ func runLocal(args []string) {
 	fmt.Printf("Syncing all git repos in %s", dir)
 	fmt.Println("=============")
 
-	reposToSync := actions.GetGitDirList(dir)
+	var reposToSync actions.Repos
+	for _, dir := range actions.GetGitDirList(dir) {
+		reposToSync = append(reposToSync, &actions.Repo{
+			Name: dir,
+		})
+	}
 	lenSync := len(reposToSync)
 
 	fmt.Println("=============")
 	colorstring.Printf("[green]%d repos to sync\n", lenSync)
 	fmt.Println("=============")
 
-	failedSyncRepos, warningSyncRepos := actions.SyncRepos(reposToSync, dir)
-	lenSyncWarnings := len(warningSyncRepos)
-	lenSyncFailures := len(failedSyncRepos)
+	reposToSync.SyncRepos(dir)
 
-	if lenSyncWarnings > 0 {
-		fmt.Println("=============")
-		//nolint:errcheck
-		colorstring.Println("[green]Sync repos [yellow]warnings")
-		for _, s := range warningSyncRepos {
-			//nolint:errcheck
-			colorstring.Println(s)
+	lenSyncWarnings := 0
+	warnings := false
+	for _, repo := range reposToSync {
+		if repo.Severity == actions.Warning {
+			if !warnings {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[yellow]Warnings:")
+				warnings = true
+			}
+			colorstring.Printf("[green]Sync %s: [yellow]%s", repo.Name, repo.Message)
+			lenSyncWarnings++
 		}
 	}
-	if lenSyncFailures > 0 {
+	// No warnings from clone or archive
+	if warnings {
 		fmt.Println("=============")
-		//nolint:errcheck
-		colorstring.Println("[red]Failed [green]sync repos")
-		for _, s := range failedSyncRepos {
-			//nolint:errcheck
-			colorstring.Println(s)
+	}
+
+	lenSyncFailures := 0
+	errors := false
+	for _, repo := range reposToSync {
+		if repo.Severity == actions.Error {
+			if !errors {
+				fmt.Println("=============")
+				//nolint:errcheck
+				colorstring.Println("[red]Errors:")
+				errors = true
+			}
+			colorstring.Printf("[green]Sync %s: [red]%s", repo.Name, repo.Message)
+			lenSyncFailures++
 		}
 	}
+	if errors {
+		fmt.Println("=============")
+	}
+
 	if !viper.GetBool("dry-run") {
 		fmt.Println("=============")
 		if lenSyncFailures > 0 {
-			colorstring.Printf("[red]%d[reset]/[green]%d repos synced", lenSync-lenSyncFailures, lenSync)
-
+			colorstring.Printf("[red]%d[reset]/[green]%d repos synced\n", lenSync-lenSyncFailures, lenSync)
 		} else {
-			colorstring.Printf("[green]%d/%d repos synced", lenSync-lenSyncFailures, lenSync)
+			colorstring.Printf("[green]%d/%d repos synced\n", lenSync-lenSyncFailures, lenSync)
 		}
 	}
 }

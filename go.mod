@@ -3,6 +3,7 @@ module github.com/lhopki01/git-mass-sync
 go 1.12
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/pelletier/go-toml v1.4.0 // indirect
