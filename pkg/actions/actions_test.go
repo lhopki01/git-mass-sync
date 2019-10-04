@@ -14,28 +14,49 @@ import (
 
 func TestSyncRepos(t *testing.T) {
 	testDir := CreateTestDirs()
-	failures, warnings := SyncRepos([]string{"gitDir"}, testDir)
-	expectedFailures := []string{"[green]Syncing gitDir: [red]exit status 1\nno git remotes found\n"}
-	var expectedWarnings []string
-	assert.Equal(t, expectedFailures, failures)
-	assert.Equal(t, expectedWarnings, warnings)
+	repos := Repos{
+		&Repo{
+			Name: "gitDir",
+		},
+	}
+	repos.SyncRepos(testDir)
+	assert.Equal(t, "no git remotes found\n", repos[0].Message)
+	assert.Equal(t, Error, repos[0].Severity)
 	os.RemoveAll(testDir)
 }
 
 func TestCloneRepos(t *testing.T) {
 	testDir := CreateTestDirs()
-	failures := CloneRepos([]string{"git@gitub.com/foo/bar.git"}, testDir)
-	expectedFailures := []string{"[cyan]Cloning git@gitub.com/foo/bar.git: [red]exit status 128\nfatal: repository 'git@gitub.com/foo/bar.git' does not exist\n"}
-	assert.Equal(t, expectedFailures, failures)
+	repos := Repos{
+		&Repo{
+			Name:   "bar",
+			SSHURL: "git@github.com/foo/bar.git",
+		},
+	}
+	repos.CloneRepos(testDir)
+	//expectedFailures := []string{"[cyan]Cloning git@gitub.com/foo/bar.git: [red]exit status 128\nfatal: repository 'git@gitub.com/foo/bar.git' does not exist\n"}
+	assert.Equal(t, "fatal: repository 'git@github.com/foo/bar.git' does not exist\n", repos[0].Message)
+	assert.Equal(t, Error, repos[0].Severity)
 	os.RemoveAll(testDir)
 }
 
 func TestArchiveRepos(t *testing.T) {
 	testDir := CreateTestDirs()
 	archiveDir := testDir + "/.archive"
-	failures := ArchiveRepos([]string{"gitDir", "nonExistantDir"}, testDir, archiveDir)
-	expectedFailures := []string{fmt.Sprintf("[light_magenta]Archiving nonExistantDir: [red]rename %s/nonExistantDir %s/.archive/nonExistantDir: no such file or directory\n", testDir, testDir)}
-	assert.Equal(t, expectedFailures, failures)
+	repos := Repos{
+		&Repo{
+			Name:     "gitDir",
+			Archived: true,
+		},
+		&Repo{
+			Name:     "nonExistantDir",
+			Archived: true,
+		},
+	}
+
+	repos.ArchiveRepos(testDir, archiveDir)
+	expectedFailures := fmt.Sprintf("rename %s/nonExistantDir %s/.archive/nonExistantDir: no such file or directory", testDir, testDir)
+	assert.Equal(t, expectedFailures, repos[1].Message)
 	assert.DirExists(t, archiveDir+"/gitDir")
 	os.RemoveAll(testDir)
 }

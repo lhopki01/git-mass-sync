@@ -1,0 +1,9 @@
+run:
+  tests: false
+linters:
+  enable-all: true
+  disable:
+    - gochecknoinits
+    - gochecknoglobals
+    - funlen
+    - lll

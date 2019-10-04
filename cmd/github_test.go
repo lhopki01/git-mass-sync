@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/lhopki01/git-mass-sync/pkg/actions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,7 +54,7 @@ func TestNextPageLink(t *testing.T) {
 func TestRepoActions(t *testing.T) {
 	type testCase struct {
 		tName           string
-		repo            repo
+		repo            *actions.Repo
 		dirList         []string
 		expectedAction  action
 		expectedDirList []string
@@ -61,10 +62,10 @@ func TestRepoActions(t *testing.T) {
 	testCases := []testCase{
 		{
 			tName: "repo to archive",
-			repo: repo{
+			repo: &actions.Repo{
 				Name:     "archivedRepo",
 				Archived: true,
-				SSHURL:   "git@giturl",
+				SSHURL:   "git@giturl/archivedRepo",
 			},
 			dirList:         []string{"archivedRepo", "syncRepo", "deletedRepo"},
 			expectedAction:  actionArchive,
@@ -72,7 +73,7 @@ func TestRepoActions(t *testing.T) {
 		},
 		{
 			tName: "repo to clone",
-			repo: repo{
+			repo: &actions.Repo{
 				Name:     "cloneRepo",
 				Archived: false,
 				SSHURL:   "git@giturl/cloneRepo",
@@ -83,10 +84,10 @@ func TestRepoActions(t *testing.T) {
 		},
 		{
 			tName: "repo to sync",
-			repo: repo{
+			repo: &actions.Repo{
 				Name:     "syncRepo",
 				Archived: false,
-				SSHURL:   "git@giturl",
+				SSHURL:   "git@giturl/syncRepo",
 			},
 			dirList:         []string{"archivedRepo", "syncRepo", "deletedRepo"},
 			expectedAction:  actionSync,
@@ -94,7 +95,7 @@ func TestRepoActions(t *testing.T) {
 		},
 		{
 			tName: "repo to clone and archive",
-			repo: repo{
+			repo: &actions.Repo{
 				Name:     "cloneArchiveRepo",
 				Archived: true,
 				SSHURL:   "git@giturl/cloneArchiveRepo",
@@ -104,7 +105,7 @@ func TestRepoActions(t *testing.T) {
 			expectedDirList: []string{"archivedRepo", "syncRepo", "deletedRepo"},
 		},
 	}
-	var repos []repo
+	var repos actions.Repos
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.tName, func(t *testing.T) {
@@ -118,9 +119,41 @@ func TestRepoActions(t *testing.T) {
 	inR, _ := regexp.Compile(".*")
 	exR, _ := regexp.Compile("^$")
 	reposToSync, reposToClone, reposToArchive := repoActions(repos, []string{"archivedRepo", "syncRepo", "deletedRepo"}, "foobar", inR, exR)
-	assert.Equal(t, []string{"syncRepo"}, reposToSync)
-	assert.Equal(t, []string{"git@giturl/cloneRepo", "git@giturl/cloneArchiveRepo"}, reposToClone)
-	assert.Equal(t, []string{"archivedRepo", "cloneArchiveRepo", "deletedRepo"}, reposToArchive)
+
+	assert.Equal(t, actions.Repos{
+		&actions.Repo{
+			Name:   "syncRepo",
+			SSHURL: "git@giturl/syncRepo",
+		},
+	}, reposToSync)
+
+	assert.Equal(t, actions.Repos{
+		&actions.Repo{
+			Name:   "cloneRepo",
+			SSHURL: "git@giturl/cloneRepo",
+		},
+		&actions.Repo{
+			Name:     "cloneArchiveRepo",
+			Archived: true,
+			SSHURL:   "git@giturl/cloneArchiveRepo",
+		},
+	}, reposToClone)
+
+	assert.Equal(t, actions.Repos{
+		&actions.Repo{
+			Name:     "archivedRepo",
+			Archived: true,
+			SSHURL:   "git@giturl/archivedRepo",
+		},
+		&actions.Repo{
+			Name:     "cloneArchiveRepo",
+			Archived: true,
+			SSHURL:   "git@giturl/cloneArchiveRepo",
+		},
+		&actions.Repo{
+			Name: "deletedRepo",
+		},
+	}, reposToArchive)
 }
 
 type MockClient struct {
@@ -156,9 +189,11 @@ func TestGetRepoList(t *testing.T) {
 		},
 	}
 	repoList := getRepoList("foobar", client)
-	expectRepos := []repo{
-		{
-			SSHURL: "git@github.com/foobar.git", Name: "foobar", Archived: false,
+	expectRepos := actions.Repos{
+		&actions.Repo{
+			SSHURL:   "git@github.com/foobar.git",
+			Name:     "foobar",
+			Archived: false,
 		},
 	}
 	assert.Equal(t, expectRepos, repoList)
