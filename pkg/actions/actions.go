@@ -33,6 +33,7 @@ func (repos Repos) SyncRepos(dir string) {
 	)
 
 	if verbose || dryRun {
+		//nolint:errcheck
 		colorstring.Println("[green]Syncing repos")
 	} else {
 		err := bar.RenderBlank()
@@ -47,6 +48,7 @@ func (repos Repos) SyncRepos(dir string) {
 		} else {
 			swg.Add()
 			if verbose {
+				//nolint:errcheck
 				colorstring.Printf("[green]Syncing %s\n", repo.Name)
 			}
 			go repo.syncRepo(dir, &swg, bar)
@@ -85,10 +87,10 @@ func (repo *Repo) syncRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup, bar *
 	swg.Done()
 }
 
-func (reposToClone Repos) CloneRepos(dir string) {
+func (repos Repos) CloneRepos(dir string) {
 	swg := sizedwaitgroup.New(viper.GetInt("parallelism"))
 
-	for _, repo := range reposToClone {
+	for _, repo := range repos {
 		if viper.GetBool("dry-run") {
 			colorstring.Printf("[cyan]Would clone %s\n", repo.Name)
 		} else {
@@ -113,7 +115,7 @@ func (repo *Repo) cloneRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 }
 
-func (reposToArchive Repos) ArchiveRepos(dir, archiveDir string) {
+func (repos Repos) ArchiveRepos(dir, archiveDir string) {
 	swg := sizedwaitgroup.New(viper.GetInt("parallelism"))
 
 	if _, err := os.Stat(archiveDir); os.IsNotExist(err) {
@@ -129,7 +131,7 @@ func (reposToArchive Repos) ArchiveRepos(dir, archiveDir string) {
 			}
 		}
 	}
-	for _, repo := range reposToArchive {
+	for _, repo := range repos {
 		if viper.GetBool("dry-run") {
 			colorstring.Printf("[light_magenta]Would archive %s in %s\n", repo.Name, archiveDir)
 		} else {

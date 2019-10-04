@@ -33,7 +33,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type HttpClient interface {
+type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
@@ -261,7 +261,7 @@ func repoActions(repoList actions.Repos, dirList []string, archiveDir string, in
 	return reposToSync, reposToClone, reposToArchive
 }
 
-func getRepoList(org string, client HttpClient) actions.Repos {
+func getRepoList(org string, client HTTPClient) actions.Repos {
 	fmt.Printf("Getting repo list")
 
 	var repoList actions.Repos
@@ -277,11 +277,12 @@ func getRepoList(org string, client HttpClient) actions.Repos {
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 		resp, err := client.Do(req)
-		if resp.StatusCode != 200 {
-			log.Fatalf("Unknown response %d for request: %s", resp.StatusCode, url)
-		}
 		if err != nil {
 			log.Fatalf("Github api request failed with err: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			log.Fatalf("Unknown response %d for request: %s", resp.StatusCode, url)
 		}
 
 		buf := new(bytes.Buffer)

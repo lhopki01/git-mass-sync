@@ -11,6 +11,10 @@ test-cover:
 lint:
 	golangci-lint run
 
+update:
+	go get -u
+	@git diff -- go.mod go.sum || :
+
 release:
 	git tag -a $$VERSION
 	git push origin $$VERSION
