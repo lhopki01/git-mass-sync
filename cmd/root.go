@@ -33,17 +33,12 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Println(err)
+		//nolint:gomnd
 		os.Exit(1)
 	}
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 	rootCmd.PersistentFlags().BoolP("dry-run", "n", false, "Show what would happen")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Make the operation more talkative")
 	rootCmd.PersistentFlags().Int("parallelism", 50, "Max parallel processes to run")
@@ -52,5 +47,6 @@ func init() {
 	if err != nil {
 		log.Fatalf("Binding flags failed: %s", err)
 	}
+
 	viper.AutomaticEnv()
 }

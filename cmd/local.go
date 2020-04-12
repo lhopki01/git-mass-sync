@@ -13,12 +13,8 @@ import (
 var localCmd = &cobra.Command{
 	Use:   "local [target dir]",
 	Short: "Sync all repos within the target directory",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return fmt.Errorf("wrong number of arguments")
-		}
-		return nil
-	},
+	//nolint:gomnd
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runLocal(args)
 	},
@@ -41,6 +37,7 @@ func runLocal(args []string) {
 			Name: dir,
 		})
 	}
+
 	lenSync := len(reposToSync)
 
 	fmt.Println("=============")
@@ -51,14 +48,17 @@ func runLocal(args []string) {
 
 	lenSyncWarnings := 0
 	warnings := false
+
 	for _, repo := range reposToSync {
 		if repo.Severity == actions.Warning {
 			if !warnings {
 				fmt.Println("=============")
 				//nolint:errcheck
 				colorstring.Println("[yellow]Warnings:")
+
 				warnings = true
 			}
+
 			colorstring.Printf("[green]Sync %s: [yellow]%s", repo.Name, repo.Message)
 			lenSyncWarnings++
 		}
@@ -70,24 +70,29 @@ func runLocal(args []string) {
 
 	lenSyncFailures := 0
 	errors := false
+
 	for _, repo := range reposToSync {
 		if repo.Severity == actions.Error {
 			if !errors {
 				fmt.Println("=============")
 				//nolint:errcheck
 				colorstring.Println("[red]Errors:")
+
 				errors = true
 			}
+
 			colorstring.Printf("[green]Sync %s: [red]%s", repo.Name, repo.Message)
 			lenSyncFailures++
 		}
 	}
+
 	if errors {
 		fmt.Println("=============")
 	}
 
 	if !viper.GetBool("dry-run") {
 		fmt.Println("=============")
+
 		if lenSyncFailures > 0 {
 			colorstring.Printf("[red]%d[reset]/[green]%d repos synced\n", lenSync-lenSyncFailures, lenSync)
 		} else {

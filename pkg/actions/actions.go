@@ -20,6 +20,7 @@ func (repos Repos) SyncRepos(dir string) {
 	if num == 0 {
 		return
 	}
+
 	verbose := viper.GetBool("verbose")
 	dryRun := viper.GetBool("dry-run")
 
@@ -62,6 +63,7 @@ func (repos Repos) SyncRepos(dir string) {
 		if err != nil {
 			fmt.Printf("Can't render progress bar finish")
 		}
+
 		println("")
 	}
 }
@@ -72,18 +74,23 @@ func (repo *Repo) syncRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup, bar *
 	output, err := cmd.CombinedOutput()
 	repo.Message = string(output)
 	debug.Debugf("Output of hub sync %s: %s", repo.Name, string(output))
+
 	if strings.Contains(string(output), "warning: ") {
 		repo.Severity = Warning
 	}
+
 	if err != nil {
 		repo.Severity = Error
 	}
+
 	if !viper.GetBool("verbose") {
+		//nolint:gomnd
 		err := bar.Add(1)
 		if err != nil {
 			fmt.Printf("Can't add to progress bar")
 		}
 	}
+
 	swg.Done()
 }
 
@@ -99,17 +106,22 @@ func (repos Repos) CloneRepos(dir string) {
 			go repo.cloneRepo(dir, &swg)
 		}
 	}
+
 	swg.Wait()
 }
 
 func (repo *Repo) cloneRepo(dir string, swg *sizedwaitgroup.SizedWaitGroup) {
 	defer swg.Done()
+
+	//nolint:gosec
 	cmd := exec.Command("git", "clone", repo.SSHURL)
+
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	repo.Message = string(output)
 
 	debug.Debugf("Output of git clone %s: %s", repo.Name, output)
+
 	if err != nil {
 		repo.Severity = Error
 	}
@@ -127,10 +139,12 @@ func (repos Repos) ArchiveRepos(dir, archiveDir string) {
 			if err != nil {
 				//nolint:errcheck
 				colorstring.Println("[red]Failed to create archive dir")
+				//nolint:gomnd
 				os.Exit(1)
 			}
 		}
 	}
+
 	for _, repo := range repos {
 		if viper.GetBool("dry-run") {
 			colorstring.Printf("[light_magenta]Would archive %s in %s\n", repo.Name, archiveDir)
@@ -146,10 +160,12 @@ func (repos Repos) ArchiveRepos(dir, archiveDir string) {
 
 func (repo *Repo) archiveRepo(dir, archiveDir string, swg *sizedwaitgroup.SizedWaitGroup) {
 	defer swg.Done()
+
 	err := os.Rename(
 		fmt.Sprintf("%s/%s", dir, repo.Name),
 		fmt.Sprintf("%s/%s", archiveDir, repo.Name),
 	)
+
 	if err != nil {
 		repo.Severity = Error
 		repo.Message = err.Error()
@@ -158,19 +174,25 @@ func (repo *Repo) archiveRepo(dir, archiveDir string, swg *sizedwaitgroup.SizedW
 
 func GetGitDirList(dir string) []string {
 	fmt.Printf("Getting existing git directory list")
+
 	var dirList []string
+
 	files, err := ioutil.ReadDir(dir)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	for i, f := range files {
 		if i%100 == 0 && !viper.GetBool("verbose") {
 			fmt.Printf(".")
 		}
+
 		if f.IsDir() {
 			cmd := exec.Command("git", "rev-parse")
 			cmd.Dir = fmt.Sprintf("%s/%s", dir, f.Name())
 			err = cmd.Run()
+
 			if err == nil {
 				dirList = append(dirList, f.Name())
 			} else {
@@ -180,9 +202,11 @@ func GetGitDirList(dir string) []string {
 			debug.Debugf("\n[%s] is not a directory", f.Name())
 		}
 	}
+
 	if !viper.GetBool("verbose") {
 		fmt.Println("")
 	}
+
 	return dirList
 }
 
@@ -191,6 +215,8 @@ func RemoveElementFromSlice(s []string, i int) []string {
 	if len(s) <= i {
 		return s
 	}
+
 	s[i] = s[0]
+
 	return s[1:]
 }
