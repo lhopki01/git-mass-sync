@@ -6,4 +6,4 @@ linters:
     - gochecknoinits
     - gochecknoglobals
     - funlen
-    - lll
+    #- lll

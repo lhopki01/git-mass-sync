@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"bytes"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"testing"
@@ -10,46 +8,6 @@ import (
 	"github.com/lhopki01/git-mass-sync/pkg/actions"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestNextPageLink(t *testing.T) {
-	type testCase struct {
-		tName            string
-		linkHeader       string
-		addLink          bool
-		expectedNextPage string
-	}
-	testCases := []testCase{
-		{
-			tName:            "existing next page",
-			linkHeader:       `<https://api.github.com/organizations/16915932/repos?page=2>; rel="next", <https://api.github.com/organizations/16915932/repos?page=12>; rel="last"`,
-			addLink:          true,
-			expectedNextPage: `https://api.github.com/organizations/16915932/repos?page=2`,
-		},
-		{
-			tName:            "no next page",
-			linkHeader:       `<https://api.github.com/organizations/16915932/repos?page=11&wper_page=2>; rel="prev", <https://api.github.com/organizations/16915932/repos?page=1&wper_page=2>; rel="first"`,
-			addLink:          true,
-			expectedNextPage: "",
-		},
-		{
-			tName:            "no next links",
-			linkHeader:       ``,
-			addLink:          false,
-			expectedNextPage: "",
-		},
-	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.tName, func(t *testing.T) {
-			t.Parallel()
-			h := http.Header{}
-			if tc.addLink {
-				h.Add("Link", tc.linkHeader)
-			}
-			assert.Equal(t, tc.expectedNextPage, getNextPageLink(h))
-		})
-	}
-}
 
 func TestRepoActions(t *testing.T) {
 	type testCase struct {
@@ -166,38 +124,6 @@ func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
 	}
 	// just in case you want default correct return value
 	return &http.Response{}, nil
-}
-
-func TestGetRepoList(t *testing.T) {
-	body := ioutil.NopCloser(bytes.NewReader([]byte(`
-	[
-		{
-			"Name": "foobar",
-			"ssh_url": "git@github.com/foobar.git",
-			"Archive": false
-		}
-	]
-	`)))
-
-	client := &MockClient{
-		DoFunc: func(req *http.Request) (*http.Response, error) {
-			// do whatever you want
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       body,
-			}, nil
-		},
-	}
-	repoList := getRepoList("foobar", client)
-	expectRepos := actions.Repos{
-		&actions.Repo{
-			SSHURL:   "git@github.com/foobar.git",
-			Name:     "foobar",
-			Archived: false,
-		},
-	}
-	assert.Equal(t, expectRepos, repoList)
-
 }
 
 func TestProcessFlags(t *testing.T) {
