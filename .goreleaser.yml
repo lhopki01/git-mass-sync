@@ -11,13 +11,13 @@ builds:
   - CGO_ENABLED=0
   ldflags:
   - -X "github.com/lhopki01/git-mass-sync/cmd.Version={{.Env.VERSION}}"
-archive:
-  replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
