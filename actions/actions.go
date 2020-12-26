@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/lhopki01/git-mass-sync/pkg/debug"
+	"github.com/lhopki01/git-mass-sync/debug"
 	"github.com/mitchellh/colorstring"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/schollz/progressbar/v2"
@@ -165,7 +165,6 @@ func (repo *Repo) archiveRepo(dir, archiveDir string, swg *sizedwaitgroup.SizedW
 		fmt.Sprintf("%s/%s", dir, repo.Name),
 		fmt.Sprintf("%s/%s", archiveDir, repo.Name),
 	)
-
 	if err != nil {
 		repo.Severity = Error
 		repo.Message = err.Error()
@@ -178,7 +177,6 @@ func GetGitDirList(dir string) []string {
 	var dirList []string
 
 	files, err := ioutil.ReadDir(dir)
-
 	if err != nil {
 		log.Fatal(err)
 	}

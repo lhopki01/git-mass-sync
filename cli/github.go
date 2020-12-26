@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package cli
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
-	"github.com/lhopki01/git-mass-sync/pkg/actions"
+	"github.com/lhopki01/git-mass-sync/actions"
 	"github.com/mitchellh/colorstring"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

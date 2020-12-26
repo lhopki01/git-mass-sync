@@ -14,8 +14,8 @@
 
 package main
 
-import "github.com/lhopki01/git-mass-sync/cmd"
+import "github.com/lhopki01/git-mass-sync/cli"
 
 func main() {
-	cmd.Execute()
+	cli.Execute()
 }

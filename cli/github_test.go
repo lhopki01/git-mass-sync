@@ -1,11 +1,11 @@
-package cmd
+package cli
 
 import (
 	"net/http"
 	"regexp"
 	"testing"
 
-	"github.com/lhopki01/git-mass-sync/pkg/actions"
+	"github.com/lhopki01/git-mass-sync/actions"
 	"github.com/stretchr/testify/assert"
 )
 
