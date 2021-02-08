@@ -87,6 +87,15 @@ func init() {
 }
 
 func processFlags(args []string) (string, string, string, *regexp.Regexp, *regexp.Regexp) {
+	if viper.GetString("private") != "" {
+		colorstring.Print("[red][--private=false] flag is deprecated please use [--search \"is:public\"] instead")
+		fmt.Println("")
+	}
+	if viper.GetString("forks") != "" {
+		colorstring.Print("[red][--forks=false] flag is deprecated please use [--search \"forks:false\"] instead")
+		fmt.Println("")
+	}
+
 	id := args[0]
 
 	dir := filepath.Clean(args[1])
