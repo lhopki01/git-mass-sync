@@ -22,11 +22,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
+	"time"
 
 	"github.com/google/go-github/github"
 	"github.com/lhopki01/git-mass-sync/actions"
 	"github.com/mitchellh/colorstring"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
@@ -44,6 +45,14 @@ const (
 	actionArchive
 	actionCloneArchive
 	actionNone
+)
+
+type idType int
+
+const (
+	org idType = iota
+	user
+	unknown
 )
 
 const reposPerPage = 100
@@ -65,8 +74,9 @@ func init() {
 	githubCmd.Flags().String("include", ".*", "Regex to match repo names against")
 	githubCmd.Flags().String("exclude", "^$", "Regex to exclude repo names against")
 	githubCmd.Flags().String("archive-dir", "", "Repo to put archived repos in\n(default is .archive in the download dir)")
-	githubCmd.Flags().Bool("private", true, "Sync private repos\nWill speed up finding list if false")
-	githubCmd.Flags().Bool("forks", true, "Sync forks")
+	githubCmd.Flags().StringP("search", "s", "", "Github search string to use")
+	githubCmd.Flags().String("private", "", `DEPRECATED use [--search "is:public"] instead`)
+	githubCmd.Flags().String("forks", "", `DEPRECATED use [--search "fork:false"] instead`)
 
 	err := viper.BindPFlags(githubCmd.Flags())
 	if err != nil {
@@ -103,6 +113,7 @@ func processFlags(args []string) (string, string, string, *regexp.Regexp, *regex
 
 func runGithub(args []string) {
 	dir, archiveDir, id, inR, exR := processFlags(args)
+
 	repoList := getRepoList(id)
 
 	if !viper.GetBool("verbose") {
@@ -306,7 +317,7 @@ func getRepoList(id string) actions.Repos {
 
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		log.Fatal("Cannot find Github Personal Access Token at env var GITHUB_TOKEN")
+		log.Fatal("Cannot find Github Personal Access Token at env var GITHUB_TOKEN with 'repo' permissions")
 	}
 
 	ts := oauth2.StaticTokenSource(
@@ -315,133 +326,71 @@ func getRepoList(id string) actions.Repos {
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	repos := getOrgRepos(client, id)
-	if len(repos) == 0 {
-		repos = getUserRepos(client, id)
+	searchQuery := fmt.Sprintf("user:%s fork:true %s", id, viper.GetString("search"))
+
+	rs, err := repoSearch(client, searchQuery)
+	if err != nil {
+		fmt.Println("")
+		log.Fatal(err)
 	}
+
+	repos := convertToRepos(rs)
 
 	return repos
 }
 
-func getOrgRepos(client *github.Client, id string) actions.Repos {
-	ctx := context.Background()
-
-	var allRepos []*github.Repository
-
-	optOrg := &github.RepositoryListByOrgOptions{
-		ListOptions: github.ListOptions{PerPage: reposPerPage},
+func getIdType(client *github.Client, id string) (idType, error) {
+	result, _, err := client.Users.Get(context.Background(), id)
+	if err != nil {
+		return unknown, fmt.Errorf("Cannot find org or user [%s] with err: %w", id, err)
 	}
-
-	for {
-		repos, resp, err := client.Repositories.ListByOrg(ctx, id, optOrg)
-		if err != nil {
-			if strings.Contains(err.Error(), "404 Not Found") {
-				break
-			}
-
-			log.Fatal(err)
-		}
-
-		for _, repo := range repos {
-			if !viper.GetBool("private") && *repo.Private {
-				continue
-			}
-
-			if !viper.GetBool("forks") && *repo.Fork {
-				continue
-			}
-
-			allRepos = append(allRepos, repo)
-		}
-
-		fmt.Printf(".")
-
-		if resp.NextPage == 0 {
-			return convertToRepos(allRepos)
-		}
-
-		optOrg.Page = resp.NextPage
+	switch *result.Type {
+	case "Organization":
+		return org, nil
+	case "User":
+		return user, nil
 	}
-
-	return convertToRepos(allRepos)
+	return unknown, nil
 }
 
-func getUserRepos(client *github.Client, id string) actions.Repos {
-	ctx := context.Background()
-
-	var allRepos []*github.Repository
-
-	if viper.GetBool("private") {
-		opt := &github.RepositoryListOptions{
-			ListOptions: github.ListOptions{PerPage: reposPerPage},
-		}
-
-		for {
-			repos, resp, err := client.Repositories.List(ctx, "", opt)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-
-			for _, repo := range repos {
-				if *repo.Owner.Login == id {
-					if !viper.GetBool("forks") && *repo.Fork {
-						continue
-					}
-
-					allRepos = append(allRepos, repo)
-				}
-			}
-
-			fmt.Printf(".")
-
-			if resp.NextPage == 0 {
-				break
-			}
-
-			opt.Page = resp.NextPage
-		}
-
-		user, _, err := client.Users.Get(ctx, "")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if *user.Login == id {
-			return convertToRepos(allRepos)
-		}
-	}
-
-	opt := &github.RepositoryListOptions{
-		ListOptions: github.ListOptions{PerPage: reposPerPage},
-	}
-
+// RepoSearch performs a query against github, consumes all the pages and returns the aggregated results.
+func repoSearch(client *github.Client, query string) ([]github.Repository, error) {
+	var results []github.Repository
+	page := 1
 	for {
-		repos, resp, err := client.Repositories.List(ctx, id, opt)
+		fmt.Print(".")
+		res, resp, err := client.Search.Repositories(
+			context.Background(),
+			query,
+			&github.SearchOptions{
+				ListOptions: github.ListOptions{
+					PerPage: 100,
+					Page:    page,
+				},
+			},
+		)
 		if err != nil {
-			log.Fatal(err.Error())
-		}
-
-		for _, repo := range repos {
-			if !viper.GetBool("forks") && *repo.Fork {
+			if _, ok := err.(*github.AbuseRateLimitError); ok {
+				fmt.Print("throttled, backing off")
+				time.Sleep(5 * time.Second)
 				continue
 			}
 
-			allRepos = append(allRepos, repo)
+			return nil, errors.Wrap(err, "unable to perform github repository search request")
 		}
 
-		fmt.Printf(".")
+		page++
+		results = append(results, res.Repositories...)
 
 		if resp.NextPage == 0 {
 			break
 		}
-
-		opt.Page = resp.NextPage
 	}
 
-	return convertToRepos(allRepos)
+	return results, nil
 }
 
-func convertToRepos(rs []*github.Repository) actions.Repos {
+func convertToRepos(rs []github.Repository) actions.Repos {
 	var repos actions.Repos
 	for _, r := range rs {
 		repos = append(repos, &actions.Repo{

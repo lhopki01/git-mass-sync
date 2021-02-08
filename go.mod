@@ -3,12 +3,14 @@ module github.com/lhopki01/git-mass-sync
 go 1.12
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/mitchellh/mapstructure v1.2.2 // indirect
 	github.com/pelletier/go-toml v1.7.0 // indirect
+	github.com/pkg/errors v0.8.0
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/schollz/progressbar/v2 v2.15.0
 	github.com/spf13/afero v1.2.2 // indirect
