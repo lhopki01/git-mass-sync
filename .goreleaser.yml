@@ -29,17 +29,19 @@ changelog:
     - '^docs:'
     - '^test:'
 brews:
-  - github:
-      owner: lhopki01
-      name: brew
-    commit_author:
-      name: lhopki01
-      email: lhopki01@gmail.com
-    dependencies:
-      - git
-      - hub
-    description: "Tool to keep multiple local repos in sync with github"
-    folder: Formula
-    install: |
-      bin.install "git-mass-sync"
+- name: git-mass-sync
+  homepage: https://github.com/lhopki01/git-mass-sync
+  description: "Tool to keep multiple local repos in sync with github"
+  tap:
+    owner: lhopki01
+    name: brew
+  folder: Formula
+  commit_author:
+    name: lhopki01
+    email: lhopki01@gmail.com
+  dependencies:
+    - git
+    - hub
+  install: |
+    bin.install "git-mass-sync"
 
