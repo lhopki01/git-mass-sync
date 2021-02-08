@@ -63,6 +63,14 @@ var githubCmd = &cobra.Command{
 	Short: "Download all repos from a github organization or user",
 	//nolint:gomnd
 	Args: cobra.ExactArgs(2),
+	Example: `To download all repos for user lhopki01
+> git-mass-sync github lhopki01 ~/path/to/download/directory
+
+To download all repos for user lhopki01 with topic team-foobar
+> git-mass-sync github lhopki01 ~/download/dir --search "topic:team-foobar"
+
+To download all repos for org foobar excluding forks and archived repos
+> git-mass-sync github foobar ~/download/dir --search "archived:false forks:false"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		runGithub(args)
 	},
@@ -74,7 +82,7 @@ func init() {
 	githubCmd.Flags().String("include", ".*", "Regex to match repo names against")
 	githubCmd.Flags().String("exclude", "^$", "Regex to exclude repo names against")
 	githubCmd.Flags().String("archive-dir", "", "Repo to put archived repos in\n(default is .archive in the download dir)")
-	githubCmd.Flags().StringP("search", "s", "", "Github search string to use")
+	githubCmd.Flags().StringP("search", "s", "", "Github search string to use. Search strings are exactly the same as used on github.com")
 	githubCmd.Flags().String("private", "", `DEPRECATED use [--search "is:public"] instead`)
 	githubCmd.Flags().String("forks", "", `DEPRECATED use [--search "fork:false"] instead`)
 
