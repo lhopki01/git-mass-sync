@@ -10,7 +10,7 @@ builds:
 - env:
   - CGO_ENABLED=0
   ldflags:
-  - -X "github.com/lhopki01/git-mass-sync/cmd.Version={{.Env.VERSION}}"
+  - -X "github.com/lhopki01/git-mass-sync/cli.Version={{.Env.VERSION}}"
   main: ./cmd/cli/main.go
 archives:
   - replacements:
