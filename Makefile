@@ -24,4 +24,4 @@ release:
 	goreleaser --rm-dist
 
 build:
-	CGO_ENABLED=0 go build -ldflags "-X $(MODULE)/cmd.Version=$$VERSION"
+	CGO_ENABLED=0 go build -ldflags "-X $(MODULE)/cmd.Version=$$VERSION" cmd/cli/main.go
