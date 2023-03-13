@@ -332,9 +332,12 @@ func getRepoList(id string) actions.Repos {
 
 	ctx := context.Background()
 
-	token := os.Getenv("GITHUB_TOKEN")
+	token := os.Getenv("GITHUB_GMS_TOKEN")
 	if token == "" {
-		log.Fatal("Cannot find Github Personal Access Token at env var GITHUB_TOKEN with 'repo' permissions")
+		token = os.Getenv("GITHUB_TOKEN")
+		if token == "" {
+			log.Fatal("Cannot find Github Personal Access Token at env var GITHUB_GMS_TOKEN or GITHUB_TOKEN with 'repo' permissions")
+		}
 	}
 
 	ts := oauth2.StaticTokenSource(
